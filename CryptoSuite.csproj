@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<!-- Use SDK implicit compile items (include all .cs under the project folder).
+         This avoids duplicate <Compile> entries problems. -->
+		<EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Non-source assets -->
+		<None Include="README.md" />
+		<None Include=".gitignore" />
+	</ItemGroup>
+</Project>
