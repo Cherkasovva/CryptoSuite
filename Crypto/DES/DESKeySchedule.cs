@@ -6,6 +6,9 @@ namespace Crypto.DES
 {
     internal class DESKeySchedule
     {
+        // Таблица для начальной перестановки 64-битного ключа
+        // Удаляет 8 бит проверки четности (остается 56 бит)
+        // Индексы начинаются с 1 
         private static readonly int[] PC1 = {
             57,49,41,33,25,17,9,
             1,58,50,42,34,26,18,
@@ -17,8 +20,11 @@ namespace Crypto.DES
             21,13,5,28,20,12,4
         };
 
+        // Для каждого из 16 раундов указывает количество битов для сдвига
         private static readonly int[] Rotations = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
+        // Сжимающая перестановка из 56 бит в 48 бит
+        // Создает раундовый ключ для каждого раунда
         private static readonly int[] PC2 = {
             14,17,11,24,1,5,
             3,28,15,6,21,10,
@@ -36,16 +42,26 @@ namespace Crypto.DES
             if (key64 == null) throw new ArgumentNullException(nameof(key64));
             if (key64.Length != 8) throw new ArgumentException("DES key must be 8 bytes (64 bits).");
 
-            var pc1 = BitPermutor.Permute(key64, PC1, bitsIndexedLsbFirst: false, indexStartsAtOne: true); // 56 bits -> 7 bytes
+            var pc1 = BitPermutor.Permute(key64, PC1, bitsIndexedLsbFirst: false, indexStartsAtOne: true);
+            // 56 bits -> 7 bytes
 
+            // Инициализация половин ключа
             uint c = 0, d = 0;
-            for (int i = 0; i < 28; i++)
+
+            // Цикл по первым 28 битам результата PC1
+            for (int i = 0; i < 28; i++) 
             {
-                int byteIndex = i / 8;
-                int bitInByte = i % 8;
+                int byteIndex = i / 8; // определяет, в каком байте находится бит
+                int bitInByte = i % 8; // позиция бита в байте
+
+                // После сдвига у нас все еще целый байт, но нам нужен только младший бит.
+                // Поэтому используем &1
                 int bit = (pc1[byteIndex] >> (7 - bitInByte)) & 1;
-                c = (c << 1) | (uint)bit;
+
+                // Добавляем новый бит в младшую позицию
+                c = (c << 1) | (uint)bit; 
             }
+            
             for (int i = 0; i < 28; i++)
             {
                 int src = 28 + i;
@@ -65,6 +81,7 @@ namespace Crypto.DES
                 byte[] cd = new byte[7];
                 for (int i = 0; i < 28; i++)
                 {
+                    // & 1u - маска (оставляет только младший бит)
                     int bit = (int)((c >> (27 - i)) & 1u);
                     int byteIndex = i / 8;
                     int bitInByte = i % 8;

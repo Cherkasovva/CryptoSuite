@@ -5,6 +5,8 @@ namespace Crypto.DES
 {
     internal class DESAlgorithm
     {
+        // IP (Initial Permutation) - Начальная перестановка
+        // 
         private static readonly int[] IP = {
             58,50,42,34,26,18,10,2,
             60,52,44,36,28,20,12,4,
@@ -16,6 +18,7 @@ namespace Crypto.DES
             63,55,47,39,31,23,15,7
         };
 
+        // FP(Final Permutation) - Финальная перестановка
         private static readonly int[] FP = {
             40,8,48,16,56,24,64,32,
             39,7,47,15,55,23,63,31,
@@ -29,7 +32,14 @@ namespace Crypto.DES
 
         private readonly DESRoundFunction roundFunc = new DESRoundFunction();
 
-        // Зашифровать один 8-байтовый блок с помощью предоставленных 16 раундовый ключей (каждый по 6 байт).
+        /// <summary>
+        /// Зашифровать один 8-байтовый блок с помощью предоставленных 16 раундовый ключей (каждый по 6 байт)
+        /// </summary>
+        /// <param name="block8"></param>
+        /// <param name="roundKeys"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
         public byte[] EncryptBlock(byte[] block8, System.Collections.Generic.IReadOnlyList<byte[]> roundKeys)
         {
             if (block8 == null) throw new ArgumentNullException(nameof(block8));
@@ -45,13 +55,16 @@ namespace Crypto.DES
             Buffer.BlockCopy(ip, 0, L, 0, 4);
             Buffer.BlockCopy(ip, 4, R, 0, 4);
 
+            // 16 раундов шифрования
             for (int i = 0; i < 16; i++)
             {
+                // Применения F-функции к правой половине
                 var F = roundFunc.Transform(R, roundKeys[i]); // 4 bytes
                 var newR = new byte[4];
-                for (int j = 0; j < 4; j++) 
+                for (int j = 0; j < 4; j++)
+                    // XOR результата с левой половиной
                     newR[j] = (byte)(L[j] ^ F[j]);
-                // L <- R, R <- newR
+                // Смены половин местами: L <- R, R <- newR
                 L = R;
                 R = newR;
             }
@@ -66,6 +79,9 @@ namespace Crypto.DES
             return outb;
         }
 
+        /// <summary>
+        /// Дешифрование аналогично шифрованию, но раундовые ключи используются в обратном порядке
+        /// </summary>
         public byte[] DecryptBlock(byte[] block8, System.Collections.Generic.IReadOnlyList<byte[]> roundKeys)
         {
             if (block8 == null) throw new ArgumentNullException(nameof(block8));

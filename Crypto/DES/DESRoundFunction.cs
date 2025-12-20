@@ -5,6 +5,8 @@ namespace Crypto.DES
 {
     internal class DESRoundFunction
     {
+        // Таблица расширения E
+        // Расширяет 32-битный блок до 48 бит
         private static readonly int[] E = {
             32,1,2,3,4,5,4,5,6,7,8,9,
             8,9,10,11,12,13,12,13,14,15,16,17,
@@ -12,6 +14,7 @@ namespace Crypto.DES
             24,25,26,27,28,29,28,29,30,31,32,1
         };
 
+        // Таблица перестановки P
         private static readonly int[] P = {
             16,7,20,21,29,12,28,17,
             1,15,23,26,5,18,31,10,
@@ -19,6 +22,8 @@ namespace Crypto.DES
             19,13,30,6,22,11,4,25
         };
 
+        // Substitution boxes, массив 8х4х16 = 8 S-боксов, каждый 4х16 элементов
+        // Каждый S-бокс преобразует 6 бит в 4 бита
         private static readonly int[,,] SBoxes = new int[8, 4, 16]
         {
             { {14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
@@ -61,14 +66,18 @@ namespace Crypto.DES
             if (right32.Length != 4) throw new ArgumentException("Right half must be 4 bytes");
             if (roundKey48.Length != 6) throw new ArgumentException("Round key must be 6 bytes (48 bits)");
 
+            // Расширяющая перестановка
             var expanded = BitPermutor.Permute(right32, E, bitsIndexedLsbFirst: false, indexStartsAtOne: true);
 
+            // XOR с раундовым ключом
             var x = new byte[6];
-            for (int i = 0; i < 6; i++) x[i] = (byte)(expanded[i] ^ roundKey48[i]);
+            for (int i = 0; i < 6; i++) 
+                x[i] = (byte)(expanded[i] ^ roundKey48[i]);
 
             var sOut = new byte[4];
-            for (int s = 0; s < 8; s++)
+            for (int s = 0; s < 8; s++) // 8 S-боксов
             {
+                // Извлекаем 6 бит для текущего S-бокса
                 int bitBase = s * 6;
                 int six = 0;
                 for (int b = 0; b < 6; b++)
@@ -79,8 +88,14 @@ namespace Crypto.DES
                     int bit = (x[byteIndex] >> (7 - bitInByte)) & 1;
                     six = (six << 1) | bit;
                 }
+
+                // Определяем строку и столбец для S-бокса
+                // six & 0x20 - получение бита 6
                 int row = ((six & 0x20) >> 4) | (six & 0x1); 
                 int col = (six >> 1) & 0x0F;
+                // Оставляет только 4 младших бита - &0x0F
+
+                // Получаем значение из S-бокса
                 int sVal = SBoxes[s, row, col] & 0x0F;
 
                 int outBitBase = s * 4;

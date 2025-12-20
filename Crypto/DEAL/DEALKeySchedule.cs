@@ -7,13 +7,18 @@ namespace Crypto.DEAL
     /// </summary>
     internal static class DEALKeySchedule
     {
-        // повернуть байт влево на n бит (0..7)
+        // Метод циклического сдвига байта: повернуть байт влево на n бит (0..7)
         private static byte Rol(byte b, int n)
         {
+            // Ограничение сдвига диапазоном 0-7
             n &= 7;
             return (byte)(((b << n) | (b >> (8 - n))) & 0xFF);
+            // & 0xFF: маска для получения только младших 8 бит
         }
 
+        /// <summary>
+        /// Основной метод генерации подключей
+        /// </summary>
         public static byte[][] GenerateSubKeys(byte[] masterKey)
         {
             if (masterKey == null) throw new ArgumentNullException(nameof(masterKey));
@@ -25,12 +30,15 @@ namespace Crypto.DEAL
             for (int i = 0; i < 16; i++)
             {
                 subs[i] = new byte[8];
+                // Вычисление начального смещения в мастер-ключе
                 int offset = (i * 7) % mlen;
                 for (int j = 0; j < 8; j++)
                 {
+                    // 1. Берем байт из мастер-ключа
                     byte b = masterKey[(offset + j) % mlen];
-                    // повернуть байт на (i+ j) & 7 и XOR на (i ^ j)
+                    // 2. Циклически сдвигаем байт влево на (i+ j) & 7
                     b = Rol(b, (i + j) & 7);
+                    // 3. Применяем XOR с константой
                     b ^= (byte)((i * 31 + j * 17) & 0xFF);
                     subs[i][j] = b;
                 }

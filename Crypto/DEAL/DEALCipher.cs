@@ -12,7 +12,8 @@ namespace Crypto.DEAL
     public class DEALCipher : ISymmetricCipher
     {
         // Предварительно рассчитанные ключи раундов DES для каждого раунда раздачи
-        // (для каждого раунда раздачи есть свой ключ DES -> 16 ключей раундов DES
+        // для каждого раунда раздачи есть свой ключ DES -> 16 ключей раундов DES.
+        // Двумерный список ключей DES для каждого раунда
         private IReadOnlyList<IReadOnlyList<byte[]>>? desRoundKeysPerDealRound;
         private byte[][]? subKeys;
         private int v;
@@ -38,7 +39,10 @@ namespace Crypto.DEAL
             if (masterKey == null) throw new ArgumentNullException(nameof(masterKey));
             subKeys = DEALKeySchedule.GenerateSubKeys(masterKey);
 
+            // Создание списка для ключей DES
             var list = new List<IReadOnlyList<byte[]>>(16);
+
+            // Мастер-ключ -> 16 субключей DEAL ->  Для каждого субключа: 16 ключей DES
             for (int i = 0; i < 16; i++)
             {
                 var sub = subKeys[i];
@@ -64,6 +68,7 @@ namespace Crypto.DEAL
             var rksList = new List<IReadOnlyList<byte[]>>(16);
             for (int i = 0; i < 16; i++) 
                 rksList.Add(desKs.GenerateRoundKeys(subs[i]));
+            // Для каждого субключа генерирует 16 ключей DES
 
             return EncryptBlockWithSchedules(plaintextBlock, subs, rksList);
         }
@@ -86,6 +91,9 @@ namespace Crypto.DEAL
             return DecryptBlockWithSchedules(ciphertextBlock, subs, rksList);
         }
 
+        /// <summary>
+        /// Шифрование с сохранёнными ключами
+        /// </summary>
         public byte[] EncryptWithConfiguredKeys(byte[] plaintextBlock)
         {
             if (desRoundKeysPerDealRound == null || subKeys == null) throw new InvalidOperationException 
@@ -97,6 +105,9 @@ namespace Crypto.DEAL
             return EncryptBlockWithSchedules(plaintextBlock, subKeys, desRoundKeysPerDealRound);
         }
 
+        /// <summary>
+        /// Дешифрование с сохранёнными ключами
+        /// </summary>
         public byte[] DecryptWithConfiguredKeys(byte[] ciphertextBlock)
         {
             if (desRoundKeysPerDealRound == null || subKeys == null) throw new InvalidOperationException
@@ -108,7 +119,13 @@ namespace Crypto.DEAL
             return DecryptBlockWithSchedules(ciphertextBlock, subKeys, desRoundKeysPerDealRound);
         }
 
-        // Шифрование основного блока с использованием предоставленных schedules
+        /// <summary>
+        /// Шифрование основного блока с использованием предоставленных schedules
+        /// </summary>
+        /// <param name="plaintextBlock"></param>
+        /// <param name="subs"></param>
+        /// <param name="rksList">Список списков раундовых ключей для DES</param>
+        /// <returns></returns>
         private byte[] EncryptBlockWithSchedules(byte[] plaintextBlock, byte[][] subs, 
             IReadOnlyList<IReadOnlyList<byte[]>> rksList)
         {
@@ -120,21 +137,21 @@ namespace Crypto.DEAL
 
             for (int round = 0; round < 16; round++)
             {
-                // temp = R XOR subkey[round]
+                //  XOR правой половины с подключом
                 var temp = new byte[8];
                 var sub = subs[round];
                 for (int i = 0; i < 8; i++) 
                     temp[i] = (byte)(R[i] ^ sub[i]);
 
-                // F = DES_E(temp, rks_for_round)
+                // F = DES_E(temp, rks_for_round) - шифрование
                 var F = desAlg.EncryptBlock(temp, rksList[round]);
 
-                // newR = L XOR F
+                // XOR левой половины с результатом DES
                 var newR = new byte[8];
                 for (int i = 0; i < 8; i++) 
                     newR[i] = (byte)(L[i] ^ F[i]);
 
-                // shift: L <- R, R <- newR
+                // Перестановка половин: L <- R, R <- newR
                 L = R;
                 R = newR;
             }
@@ -146,7 +163,13 @@ namespace Crypto.DEAL
             return outb;
         }
 
-        // Дешифрование основного блока с использованием предоставленных schedules
+        /// <summary>
+        /// Дешифрование основного блока с использованием предоставленных schedules
+        /// </summary>
+        /// <param name="ciphertextBlock"></param>
+        /// <param name="subs"></param>
+        /// <param name="rksList">Список списков раундовых ключей для DES</param>
+        /// <returns></returns>
         private byte[] DecryptBlockWithSchedules(byte[] ciphertextBlock, byte[][] subs, 
             IReadOnlyList<IReadOnlyList<byte[]>> rksList)
         {
@@ -158,12 +181,12 @@ namespace Crypto.DEAL
             // Запуск раундовых ключей в обратном порядке
             for (int round = 15; round >= 0; round--)
             {
-                // F = DES_E(L XOR subkey_round, rks_round)
                 var temp = new byte[8];
                 var sub = subs[round];
                 for (int i = 0; i < 8; i++) 
                     temp[i] = (byte)(L[i] ^ sub[i]);
 
+                // F = DES_E(L XOR subkey_round, rks_round)
                 var F = desAlg.EncryptBlock(temp, rksList[round]);
 
                 var newL = new byte[8];

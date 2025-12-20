@@ -11,7 +11,7 @@ namespace Crypto.DES
         private readonly DESAlgorithm alg = new DESAlgorithm();
         private bool disposed = false;
 
-        public int BlockSizeBytes => 8;
+        public int BlockSizeBytes => 8; // размер блока в байтах
 
         public void ConfigureRoundKeys(byte[] key)
         {
@@ -36,6 +36,11 @@ namespace Crypto.DES
             return alg.DecryptBlock(ciphertextBlock, rks);
         }
 
+        /// <summary>
+        /// Метод шифрования с предварительно сконфигурированными ключами
+        /// </summary>
+        /// <param name="plaintextBlock">блок открытого текста</param>
+        /// <returns></returns>
         public byte[] EncryptWithConfiguredKeys(byte[] plaintextBlock)
         {
             if (roundKeys == null) throw new InvalidOperationException("Round keys not configured.");
@@ -59,7 +64,8 @@ namespace Crypto.DES
                     {
                         if (rk != null)
                         {
-                            for (int i = 0; i < rk.Length; i++) rk[i] = 0;
+                            for (int i = 0; i < rk.Length; i++) 
+                                rk[i] = 0;
                         }
                     }
                 }

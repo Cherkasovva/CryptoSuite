@@ -5,18 +5,19 @@ using Crypto.DES;
 namespace Crypto.TripleDES
 {
     /// <summary>
-    /// TripleDES (EDE) реализован с использованием реализации project DES.
+    /// TripleDES реализован с использованием реализации project DES.
     /// Поддерживает варианты с 2 ключами (16 байт) и 3 ключами (24 байта).
     /// Предусмотрены одноблочные операции (шифрование/дешифрование без учета состояния и варианты с настроенным ключом).
     /// Режимы более высокого уровня (ECB/CBC/CFB/OFB/CTR/PCBC/RandomDelta) обрабатываются SymmetricCipherContext.
     /// </summary>
     public class TripleDESCipher : ISymmetricCipher, IDisposable
     {
+        // Три экземпляра DES для тройного шифрования
         private DESCipher? des1;
         private DESCipher? des2;
         private DESCipher? des3;
-        private bool configured = false;
-        private bool twoKey = false;
+        private bool configured = false; // Флаг, что ключи настроены
+        private bool twoKey = false; // Флаг, что используется 2-key
 
         public int BlockSizeBytes => 8;
 
@@ -25,7 +26,7 @@ namespace Crypto.TripleDES
         }
 
         /// <summary>
-        /// Настройте раундовые ключи из 16- или 24-байтового ключа.
+        /// Настройка раундовых ключей из 16- или 24-байтового ключа.
         /// 16 байт -> K1, K2, K3 = K1 
         /// 24 байта -> K1, K2, K3 
         /// </summary>
@@ -34,14 +35,15 @@ namespace Crypto.TripleDES
             if (key == null) throw new ArgumentNullException(nameof(key));
             if (key.Length != 16 && key.Length != 24) throw new ArgumentException("TripleDES key must be 16 (two-key) or 24 (three-key) bytes long.");
 
+            // Освобождение предыдущих ресурсов
             DisposeInternal();
 
             byte[] k1 = new byte[8];
             byte[] k2 = new byte[8];
             byte[] k3 = new byte[8];
 
-            Buffer.BlockCopy(key, 0, k1, 0, 8);
-            Buffer.BlockCopy(key, 8, k2, 0, 8);
+            Buffer.BlockCopy(key, 0, k1, 0, 8); // Первые 8 байт -> K1
+            Buffer.BlockCopy(key, 8, k2, 0, 8); // Следующие 8 байт -> K2
             if (key.Length == 24)
             {
                 Buffer.BlockCopy(key, 16, k3, 0, 8);
